@@ -23,8 +23,12 @@ jobs:
 
       - name: Copy submission into workspace
         run: |
+          echo "=== PR submission contents ==="
+          find pr-submission/submissions/inbox -type f 2>/dev/null
           cp -r pr-submission/submissions/inbox/* submissions/inbox/ 2>/dev/null || true
           rm -rf pr-submission
+          echo "=== Workspace submissions/inbox contents ==="
+          find submissions/inbox -type f 2>/dev/null
 
       - uses: actions/setup-python@v5
         with:
