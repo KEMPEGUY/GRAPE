@@ -77,12 +77,24 @@ jobs:
         id: meta
         run: |
           TEAM="${{ steps.team.outputs.name }}"
-          META=$(find submissions/inbox/${TEAM} -name "meta.yaml" -o -name "meta.yml" 2>/dev/null | head -1)
+          # Check for meta.yaml or meta.yml in team folder
+          META=""
+          for f in submissions/inbox/${TEAM}/meta.yaml submissions/inbox/${TEAM}/meta.yml; do
+            if [ -f "$f" ]; then
+              META="$f"
+              break
+            fi
+          done
           MODEL=""
           NOTES=""
           if [ -n "$META" ]; then
-            MODEL=$(grep -i '^model:' "$META" | head -1 | sed 's/^model:\s*//i' | tr ',' ' ')
-            NOTES=$(grep -i '^notes:' "$META" | head -1 | sed 's/^notes:\s*//i' | tr ',' ' ')
+            echo "Found metadata file: $META"
+            cat "$META"
+            MODEL=$(grep -i '^model:' "$META" | head -1 | sed 's/^[Mm]odel:\s*//' | tr ',' ' ')
+            NOTES=$(grep -i '^notes:' "$META" | head -1 | sed 's/^[Nn]otes:\s*//' | tr ',' ' ')
+          else
+            echo "No meta.yaml found in submissions/inbox/${TEAM}/"
+            ls -la submissions/inbox/${TEAM}/ 2>/dev/null || echo "Team folder not found"
           fi
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
           echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
