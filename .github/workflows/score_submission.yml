@@ -73,15 +73,31 @@ jobs:
           echo "f1=$F1" >> "$GITHUB_OUTPUT"
           echo "auc=$AUC" >> "$GITHUB_OUTPUT"
 
+      - name: Read optional meta.yaml
+        id: meta
+        run: |
+          TEAM="${{ steps.team.outputs.name }}"
+          META=$(find submissions/inbox/${TEAM} -name "meta.yaml" -o -name "meta.yml" 2>/dev/null | head -1)
+          MODEL=""
+          NOTES=""
+          if [ -n "$META" ]; then
+            MODEL=$(grep -i '^model:' "$META" | head -1 | sed 's/^model:\s*//i' | tr ',' ' ')
+            NOTES=$(grep -i '^notes:' "$META" | head -1 | sed 's/^notes:\s*//i' | tr ',' ' ')
+          fi
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
+
       - name: Update leaderboard
         run: |
           TEAM="${{ steps.team.outputs.name }}"
           F1="${{ steps.eval.outputs.f1 }}"
           AUC="${{ steps.eval.outputs.auc }}"
+          MODEL="${{ steps.meta.outputs.model }}"
+          NOTES="${{ steps.meta.outputs.notes }}"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           # Append to leaderboard CSV (columns: timestamp_utc,team,model,score,notes)
-          echo "${TIMESTAMP},${TEAM},,${F1}," >> leaderboard/leaderboard.csv
+          echo "${TIMESTAMP},${TEAM},${MODEL},${F1},${NOTES}" >> leaderboard/leaderboard.csv
 
           # Render leaderboard markdown
           python competition/render_leaderboard.py
@@ -105,5 +121,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ Submission Scored Successfully\n\n| Metric | Score |\n|--------|-------|\n| **Macro F1** (leaderboard) | ${{ steps.eval.outputs.f1 }} |\n| **AUROC** | ${{ steps.eval.outputs.auc }} |\n\n🏆 The leaderboard has been updated. You may now close this PR.`
+              body: `## ✅ Submission Scored Successfully\n\n| Metric | Score |\n|--------|-------|\n| **Macro F1** (leaderboard) | ${{ steps.eval.outputs.f1 }} |\n| **AUROC** | ${{ steps.eval.outputs.auc }} |\n| **Model** | ${{ steps.meta.outputs.model || 'not specified' }} |\n\n🏆 The leaderboard has been updated. You may now close this PR.`
             })
